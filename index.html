@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漢字でGO!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #e0f2fe, #e0e7ff);
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 95%;
+            max-width: 600px;
+            background: #ffffff;
+            border-radius: 30px;
+            box-shadow: 0 15px 0 #93c5fd, 0 25px 30px rgba(0,0,0,0.1);
+            padding: 20px 25px 25px 25px;
+            text-align: center;
+            position: relative;
+            border: 6px solid #2563eb;
+        }
+
+        h1 {
+            color: #1e3a8a;
+            font-size: 2.2rem;
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-shadow: 3px 3px 0 #dbeafe;
+        }
+
+        /* キャラクターエリア */
+        #char-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border: 3px dashed #3b82f6;
+            border-radius: 20px;
+            padding: 10px;
+            margin-bottom: 12px;
+            height: 85px;
+        }
+
+        #char-sprite {
+            font-size: 3rem;
+            margin-right: 15px;
+            animation: bounce 1s infinite alternate;
+        }
+
+        #char-bubble {
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 15px;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            color: #1e293b;
+            position: relative;
+            max-width: 70%;
+            text-align: left;
+        }
+
+        #char-bubble::after {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 5px 10px 5px 0;
+            border-style: solid;
+            border-color: transparent #3b82f6 transparent transparent;
+            display: block;
+            width: 0;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-6px); }
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            background: #f1f5f9;
+            padding: 8px 15px;
+            border-radius: 15px;
+            border: 3px solid #e2e8f0;
+        }
+
+        .hearts {
+            color: #ef4444;
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+        }
+
+        .score-box {
+            color: #1e3a8a;
+            font-weight: bold;
+        }
+
+        /* 漢字ステージ */
+        #stage {
+            height: 180px;
+            background: #1e3a8a;
+            border-radius: 20px;
+            border: 4px solid #3b82f6;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+            perspective: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #kanji-display {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.6), 3px 3px 0 #172554;
+            transform: translateZ(0px);
+            transition: transform 0.1s linear;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        /* 制限時間バー */
+        #timer-bar-container {
+            width: 100%;
+            height: 14px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 2px solid #cbd5e1;
+        }
+
+        #timer-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #3b82f6, #f59e0b, #ef4444);
+            transition: width 0.1s linear;
+        }
+
+        /* 入力エリア */
+        #input-box {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 1.5rem;
+            border: 4px solid #93c5fd;
+            border-radius: 50px;
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+            color: #1e3a8a;
+            box-shadow: 0 6px 0 #93c5fd;
+            transition: all 0.15s;
+        }
+
+        #input-box:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 6px 0 #3b82f6;
+        }
+
+        /* 共通画面スタイル */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            padding: 25px;
+        }
+
+        #explanation-screen {
+            background: #f0fdf4;
+            border: 6px solid #22c55e;
+        }
+
+        .explanation-word {
+            font-size: 2.2rem;
+            color: #166534;
+            margin: 0;
+            font-weight: 900;
+        }
+
+        .explanation-reading {
+            font-size: 1.2rem;
+            color: #15803d;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+
+        .explanation-text {
+            font-size: 1.1rem;
+            color: #1e293b;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #bbf7d0;
+            width: 100%;
+            max-height: 140px;
+            overflow-y: auto;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .count-bar-container {
+            width: 80%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .count-bar {
+            height: 100%;
+            width: 100%;
+            background: #22c55e;
+            transition: width 0.1s linear;
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            font-family: inherit;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #1d4ed8;
+            transition: all 0.1s;
+        }
+
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #1d4ed8;
+        }
+
+        .difficulty-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .diff-btn {
+            padding: 12px 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: 3px solid #cbd5e1;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            color: white;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.1);
+            line-height: 1.3;
+        }
+
+        .diff-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+        }
+
+        .diff-easy { background: #60a5fa; border-color: #3b82f6; }
+        .diff-normal { background: #3b82f6; border-color: #2563eb; }
+        .diff-hard { background: #1d4ed8; border-color: #1e40af; }
+        .diff-all { background: #ec4899; border-color: #db2777; }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .grade-badge {
+            font-size: 0.8rem;
+            background: #3b82f6;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="start-screen" class="screen">
+        <h1>漢字でGO! 🤖</h1>
+        <p style="color: #334155; font-weight: bold; font-size: 0.8rem; margin: 3px 0;">
+            実在する正しい日本語・熟語のみを厳選収録！<br>
+            ※送り仮名は入力不要です。（例：「求める」は「もと」で正解）<br>
+            ミスしたり時間切れになっても、解説でしっかり復習できるよ！
+        </p>
+        <p style="font-weight: bold; color: #3b82f6; margin: 5px 0; font-size: 0.9rem;">👇 モードを選んでスタート（全40問）！</p>
+        <div class="difficulty-container">
+            <button class="diff-btn diff-easy" onclick="startGame('easy')">小学校３〜４年<br><span style="font-size:0.8rem; font-weight:normal;">新出漢字：402字</span></button>
+            <button class="diff-btn diff-normal" onclick="startGame('normal')">小学校５〜６年<br><span style="font-size:0.8rem; font-weight:normal;">新出漢字：384字</span></button>
+            <button class="diff-btn diff-hard" onclick="startGame('hard')">中学校<br><span style="font-size:0.8rem; font-weight:normal;">新出漢字：1,110字</span></button>
+            <button class="diff-btn diff-all" onclick="startGame('all')">全学年<br><span style="font-size:0.8rem; font-weight:normal;">新出漢字：2,136字</span></button>
+        </div>
+    </div>
+
+    <div id="explanation-screen" class="screen hidden">
+        <div id="exp-status" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;">🌟 せいかい！ 🌟</div>
+        <h2 id="exp-word" class="explanation-word">太陽</h2>
+        <div id="exp-reading" class="explanation-reading">たいよう</div>
+        <div id="exp-text" class="explanation-text">説明が入ります。</div>
+        
+        <div class="count-bar-container">
+            <div id="count-bar" class="count-bar"></div>
+        </div>
+        <div id="count-text" style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">次の問題まであと 5 秒</div>
+        <button id="skip-btn" class="btn" style="padding: 8px 25px; font-size: 1rem;">次へ進む ➔</button>
+    </div>
+
+    <div id="result-screen" class="screen hidden">
+        <div id="char-result-emoji" style="font-size: 4rem; margin-bottom: 10px;">🤖🏆</div>
+        <h2 id="result-title" style="font-size: 2.2rem; margin: 0; color: #ef4444;">GAME OVER</h2>
+        <p id="result-score" style="font-size: 1.4rem; font-weight: bold; color: #1e293b; margin: 15px 0;"></p>
+        <button id="retry-btn" class="btn">タイトルに戻る</button>
+    </div>
+
+    <div id="char-area">
+        <div id="char-sprite">🤖</div>
+        <div id="char-bubble">ピピッ！ぼくはタイピンくん！「漢字でGO!」いっしょにがんばろう！</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="score-box">問題: <span id="question-num">1</span>/40</div>
+        <div class="hearts" id="heart-box">❤️❤️❤️❤️❤️</div>
+    </div>
+
+    <div id="stage">
+        <div>
+            <div id="kanji-display">漢字</div>
+            <br>
+            <div id="grade-info" class="grade-badge">小学3年</div>
+        </div>
+    </div>
+
+    <div id="timer-bar-container">
+        <div id="timer-bar"></div>
+    </div>
+
+    <input type="text" id="input-box" placeholder="ここに読みがなを入力" autocomplete="off" disabled>
+</div>
+
+<script>
+    // --- データベース ---
+    const kanjiDatabase = {
+        "easy": [
+            { q: "太陽", a: "たいよう", short_a: "たいよう", exp: "地球に光と熱を届けてくれる、宇宙でいちばん身近な星（恒星）のこと。", g: "小3" },
+            { q: "運送", a: "うんそう", short_a: "うんそう", exp: "トラックや船、飛行機などを使って、荷物を別の場所に運ぶこと。", g: "小3" },
+            { q: "返事", a: "へんじ", short_a: "へんじ", exp: "呼びかけに対して、言葉を返したり答えること。応対のこと。", g: "小3" },
+            { q: "感謝", a: "かんしゃ", short_a: "かんしゃ", exp: "相手の親切やありがたい行いに対して、ありがたいと思う気持ちを表すこと。", g: "小3" },
+            { q: "投球", a: "とうきゅう", short_a: "とうきゅう", exp: "野球などで、ピッチャーがバッターに向かってボールを投げること。", g: "小3" },
+            { q: "計画", a: "けいかく", short_a: "けいかく", exp: "何かを行う前に、あらかじめ手順や方法、スケジュールを考えておくこと。", g: "小3" },
+            { q: "安定", a: "あんてい", short_a: "あんてい", exp: "激しい変化や崩れがなく、落ち着いていて安心できる状態のこと。", g: "小3" },
+            { q: "横断", a: "おうだん", short_a: "おうだん", exp: "道路や川などを、横にまっすぐ通り抜けて渡ること。", g: "小3" },
+            { q: "温室", a: "おんしつ", short_a: "おんしつ", exp: "ガラスやビニールで囲い、中に暖かい空気をためて植物を育てる部屋。", g: "小3" },
+            { q: "急行", a: "きゅうこう", short_a: "きゅうこう", exp: "普通の電車やバスよりも、途中の一部の駅を飛ばして目的地へ急いで行くこと。", g: "小3" },
+            { q: "荷物", a: "にもつ", short_a: "にもつ", exp: "旅などに持ち運ぶ身の回りのものや、配達される中身のこと。", g: "小3" },
+            { q: "開業", a: "かいぎょう", short_a: "かいぎょう", exp: "新しくお店や病院などのビジネス（商売）を始めること。", g: "小3" },
+            { q: "暗記", a: "あん記", short_a: "あんき", exp: "言葉や文章などを、何も見ずにそらで言えるようにしっかりと頭に記憶すること。", g: "小3" },
+            { q: "医者", a: "いしゃ", short_a: "いしゃ", exp: "病気やケガをした人を診察し、治療をして健康を戻してくれる専門家。", g: "小3" },
+            { q: "育成", a: "いくせい", short_a: "いくせい", exp: "立派な人や優れた選手、動物などを、大事に手塩にかけて育てること。", g: "小3" },
+            { q: "勉強", a: "べんきょう", short_a: "べんきょう", exp: "知識や技術を身につけるために努力して学ぶこと。", g: "小3" },
+            { q: "発信", a: "はっしん", short_a: "はっしん", exp: "情報や電波、メッセージなどを外部に向けて送ること。", g: "小3" },
+            { q: "平和", a: "へいわ", short_a: "へいわ", exp: "戦争や争いごとがなく、世の中が穏やかに落ち着いている状態。", g: "小3" },
+            { q: "決定", a: "けってい", short_a: "けってい", exp: "方針や物事のあり方を、はっきりと決めて動かさないようにすること。", g: "小3" },
+            { q: "開会", a: "かいかい", short_a: "かいかい", exp: "式典や運動会、イベント、会議などを開始すること。", g: "小3" },
+            { q: "愛犬", a: "あいけん", short_a: "あいけん", exp: "自分がかわいがっている犬、または他人が大切にしている飼い犬のこと。", g: "小4" },
+            { q: "健康", a: "けんこう", short_a: "けんこう", exp: "体や心に病気がなく、元気で生き生きと活動できる状態のこと。", g: "小4" },
+            { q: "観察", a: "かんさつ", short_a: "かんさつ", exp: "物事の様子や変化を、注意深くじっくりと見極めること。", g: "小4" },
+            { q: "信じる", a: "しんじる", short_a: "しん", exp: "相手を疑わずに、頼りになると心から思うこと。正しいと認めること。", g: "小4" },
+            { q: "漁師", a: "りょうし", short_a: "りょうし", exp: "海や川で魚や貝をとることを仕事にしている人のこと。", g: "小4" },
+            { q: "訓練", a: "くんれん", short_a: "くんれん", exp: "技術や体力を高めるために、同じことを何度も繰り返して練習すること。", g: "小4" },
+            { q: "典型", a: "てんけい", short_a: "てんけい", exp: "その仲間を代表するような、特徴がぴったり表れている手本のこと。", g: "小4" },
+            { q: "候補", a: "こうほ", short_a: "こうほ", exp: "ある役職や選ばれる地位に、ふさわしいとして名前が挙がっている人や物のこと。", g: "小4" },
+            { q: "挙手", a: "きょしゅ", short_a: "きょしゅ", exp: "賛成の意思を示したり、発言したいときに自分の手を上にあげること。", g: "小4" },
+            { q: "救助", a: "きゅうじょ", short_a: "きゅうじょ", exp: "災害や事故などで危険な目に遭っている人を助け出すこと。", g: "小4" },
+            { q: "辞典", a: "じてん", short_a: "じてん", exp: "言葉の意味や使い方を調べるために、たくさんの文字や単語を並べた本。", g: "小4" },
+            { q: "祝日", a: "しゅくじつ", short_a: "しゅくじつ", exp: "国が法律で定めた、お祝い事やお祈りをするためのお休みの日。", g: "小4" },
+            { q: "印刷", a: "いんさつ", short_a: "いんさつ", exp: "インクを使って、文字や画像を紙などの表面に写し出すこと。", g: "小4" },
+            { q: "覚える", a: "おぼえる", short_a: "おぼ", exp: "見たり聞いたりしたことを、しっかりと頭の中に残して忘れないようにすること。", g: "小4" },
+            { q: "求める", a: "もとめる", short_a: "もと", exp: "欲しいと願うこと。または、必要なものを探したり要求したりすること。", g: "小4" },
+            { q: "共同", a: "きょうどう", short_a: "きょうどう", exp: "複数の人やグループが、2つ以上の力を合わせて一緒に物事を行うこと。", g: "小4" },
+            { q: "標本", a: "ひょうほん", short_a: "ひょうほん", exp: "鉱物、植物、動物などを研究のためにそのままの形で保存した見本。", g: "小4" },
+            { q: "希望", a: "きぼう", short_a: "きぼう", exp: "将来に対して、こうあってほしいと願う明るい見通しや夢のこと。", g: "小4" },
+            { q: "達成", a: "たっせい", short_a: "たっせい", exp: "目標や計画を、努力のすえに最後までやり遂げること。", g: "小4" },
+            { q: "約束", a: "やくそく", short_a: "やくそく", exp: "他の人と、将来こうするとお互いに決めて取り決めること。", g: "小4" }
+        ],
+        "normal": [
+            { q: "準備", a: "じゅんび", short_a: "じゅんび", exp: "物事を始める前に、必要な道具や予定をそろえて整えておくこと。", g: "小5" },
+            { q: "複雑", a: "ふくざつ", short_a: "ふくざつ", exp: "物事の仕組みや関係がいくつも絡み合っていて、簡単に理解できない様子。", g: "小5" },
+            { q: "輸出", a: "ゆしゅつ", short_a: "ゆしゅつ", exp: "自分の国で作った製品や材料を、外国に向けて船や飛行機で送り出すこと。", g: "小5" },
+            { q: "能率", a: "のうりつ", short_a: "のうりつ", exp: "一定の時間で、どれだけ多くの仕事や作業を効率よくこなせるかの度合い。", g: "小5" },
+            { q: "富豪", a: "ふごう", short_a: "ふごう", exp: "たくさんの財産やお金を持っていて、非常に豊かな暮らしをしている人のこと。", g: "小5" },
+            { q: "衛生", a: "えいせい", short_a: "えいせい", exp: "健康を守り、病気を防ぐために、体や周りの環境をきれいに保つこと。", g: "小5" },
+            { q: "興奮", a: "こうふん", short_a: "こうふん", exp: "感情が高ぶって、心や体がドキドキして落ち着かなくなること。", g: "小5" },
+            { q: "混合", a: "こんごう", short_a: "こんごう", exp: "質のちがう２つ以上の物質や要素を、ひとつに混ぜ合わせること。", g: "小5" },
+            { q: "銅像", a: "どうぞう", short_a: "どうぞう", exp: "すぐれた功績のある人物などを記念し、銅で作った像のこと。", g: "小5" },
+            { q: "貧富", a: "ひんぷ", short_a: "ひんぷ", exp: "財産が多いこと（裕福）と、少ないこと（貧乏）の差を表す言葉。", g: "小5" },
+            { q: "防衛", a: "ぼうえい", short_a: "ぼうえい", exp: "敵からの攻撃や害、危険から、自分たちの国やエリアを身を挺して守ること。", g: "小5" },
+            { q: "永住", a: "えいじゅう", short_a: "えいじゅう", exp: "他国や違う土地に、期限を定めず、死ぬまでずっとそこに住み続けること。", g: "小5" },
+            { q: "演劇", a: "えんげき", short_a: "えんげき", exp: "役者がステージの上で、観客の前でストーリーを演技してみせる芸術のこと。", g: "小5" },
+            { q: "解散", a: "かいさん", short_a: "かいさん", exp: "集まっていた人やグループ、組織が、それぞれの場所へ分かれて去ること。", g: "小5" },
+            { q: "耕す", a: "たがやす", short_a: "たがや", exp: "美味しい作物を育てるために、クワなどで土を柔らかく掘り起こすこと。", g: "小5" },
+            { q: "貿易", a: "ぼうえき", short_a: "ぼうえき", exp: "国と国との間で、商品やサービスを売り買いするビジネスのこと。", g: "小5" },
+            { q: "構造", a: "こうぞう", short_a: "こうぞう", exp: "いくつかの部分が組み合わさってできている、全体の組み立てや仕組み。", g: "小5" },
+            { q: "測量", a: "そくりょう", short_a: "そくりょう", exp: "専用の機械を使って、土地の高さ、広さ、距離などを正確に測ること。", g: "小5" },
+            { q: "賛成", a: "さんせい", short_a: "さんせい", exp: "他人の意見や提案に対して、その通りだと同意して味方をすること。", g: "小5" },
+            { q: "判断", a: "はんだん", short_a: "はんだん", exp: "物事の真偽や良し悪しを、考えをめぐらせて見極め、決めること。", g: "小5" },
+            { q: "編集", a: "へんしゅう", short_a: "へんしゅう", exp: "本や動画、新聞などを作るために、集めた材料を整理してきれいにまとめること。", g: "小6" },
+            { q: "遺産", a: "いさん", short_a: "いさん", exp: "亡くなった人が残した財産や、過去の世代から現代へ受け継がれた大切な文化や自然。", g: "小6" },
+            { q: "警備", a: "けいび", short_a: "けいび", exp: "泥棒や事故などの危険を防ぐために、建物や特定の場所を見張って守ること。", g: "小6" },
+            { q: "推測", a: "すいそく", short_a: "すいそく", exp: "今ある情報や事実をもとにして、まだ分からないことや未来のことを推し量ること。", g: "小6" },
+            { q: "穀物", a: "こく物", short_a: "こくもつ", exp: "米、小麦、トウモロコシなど、人間が主食として育てる作物のこと。", g: "小6" },
+            { q: "誠実", a: "せいじつ", short_a: "せいじつ", exp: "嘘をつかず、真面目で、他人に対しても自分に対しても真心を持っている様子。", g: "小6" },
+            { q: "並列", a: "へいれつ", short_a: "へいれつ", exp: "ふたつ以上の要素を、上下や前後の区別なく、横一列に対等に並べること。", g: "小6" },
+            { q: "危惧", a: "きぐ", short_a: "きぐ", exp: "将来に悪い結果や問題が起きるのではないかと、心配し恐れること。", g: "小6" },
+            { q: "厳格", a: "げんかく", short_a: "げんかく", exp: "ルールに厳しく、不正や甘えを一切許さずにきっちり取り締まる様子。", g: "小6" },
+            { q: "就職", a: "しゅうしょく", short_a: "しゅうしょく", exp: "学校を卒業するなどした後に、新しく会社や組織に雇われて働くこと。", g: "小6" },
+            { q: "縮小", a: "しゅくしょう", short_a: "しゅくしょう", exp: "サイズや物事の規模、活動範囲などを、以前よりも小さくすること。", g: "小6" },
+            { q: "探検", a: "たんけん", short_a: "たんけん", exp: "まだあまり他人が踏み込んでいない未知の危険な場所に行き、調査すること。", g: "小6" },
+            { q: "優しい", a: "やさしい", short_a: "やさ", exp: "相手を思いやり、親切で温かい心で接する様子。難しくないこと。", g: "小6" },
+            { q: "呼吸", a: "こきゅう", short_a: "こきゅう", exp: "肺を使って酸素を取り入れ、二酸化炭素を吐き出す生命維持の活動。", g: "小6" },
+            { q: "困難", a: "こんなん", short_a: "こんなん", exp: "障害が多く、物事を進めるのが非常にむずかしい様子や事態のこと。", g: "小6" },
+            { q: "貴重", a: "きちょう", short_a: "きちょう", exp: "非常に珍しく、代わりがないため、とても大きな価値があって大切にすべき様子。", g: "小6" },
+            { q: "展望", a: "てんぼう", short_a: "てんぼう", exp: "広い場所から遠くを見渡すこと。または、これからの将来の明るい見通しのこと。", g: "小6" },
+            { q: "誠意", a: "せいい", short_a: "せいい", exp: "相手に対して嘘偽りがなく、物事に真面目に取り組もうとする純粋な心。", g: "小6" },
+            { q: "模範", a: "もはん", short_a: "もはん", exp: "他の人が見習うべき、もっとも優れたお手本やパターンのこと。", g: "小6" },
+            { q: "維持", a: "いじ", short_a: "いじ", exp: "今ある良い状態や仕組みを、壊さないようにそのまま保ち続けること。", g: "小6" }
+        ],
+        "hard": [
+            { q: "含蓄", a: "がんちく", short_a: "がんちく", exp: "言葉や文章の奥深くに、深い意味や味わいが包み隠されていること。", g: "中学" },
+            { q: "摩擦", a: "まさつ", short_a: "まさつ", exp: "２つの物がこすれ合うこと。または、人と人との間で意見が合わずにもめること。", g: "中学" },
+            { q: "凝縮", a: "ぎょうしゅく", short_a: "ぎょうしゅく", exp: "広がっているものを、きゅっと一箇所に小さく濃縮してまとめること。", g: "中学" },
+            { q: "妥協", a: "だきょう", short_a: "だきょう", exp: "対立している双方が、お互いに少しずつ譲り合って意見をまとめること。", g: "中学" },
+            { q: "媒介", a: "ばいかい", short_a: "ばいかい", exp: "２つの異なるものの間に立って、両者の関係をとりもつ（仲介する）こと。", g: "中学" },
+            { q: "矛盾", a: "むじゅん", short_a: "むじゅん", exp: "２つの事柄のつじつまが合わず、お互いがおかしな状態になっていること。", g: "中学" },
+            { q: "驚愕", a: "きょうがく", short_a: "きょうがく", exp: "予想もしなかったような大事件や事実に、非常に激しく驚きおののくこと。", g: "中学" },
+            { q: "軌跡", a: "きせき", short_a: "きせき", exp: "車輪が通った跡。または、その人がこれまで歩んできた人生や活動のあしあと。", g: "中学" },
+            { q: "脆弱", a: "ぜいじゃく", short_a: "ぜいじゃく", exp: "もろくて壊れやすく、何かトラブルがあったときにすぐに被害を受けてしまう弱さ。", g: "中学" },
+            { q: "葛藤", a: "かっとう", short_a: "かっとう", exp: "心の中で、２つの行きたい方向や選びたい選択肢が戦って悩むこと。", g: "中学" },
+            { q: "隠蔽", a: "いんぺい", short_a: "いんぺい", exp: "都合の悪い事実や隠したい物事を、他人に知られないように隠し通すこと。", g: "中学" },
+            { q: "循環", a: "じゅんかん", short_a: "じゅんかん", exp: "物事が同じ経路をぐるぐると回り続けて、再び元の場所に戻ってくること。", g: "中学" },
+            { q: "概念", a: "がいねん", short_a: "がいねん", exp: "ある事柄に対する、共通の頭の中のイメージや大まかな考え方のこと。", g: "中学" },
+            { q: "駆逐", a: "くちく", short_a: "くちく", exp: "敵や邪魔な勢力を、そこから追い払って完全に排除すること。", g: "中学" },
+            { q: "把握", a: "はあく", short_a: "はあく", exp: "物事の状況や内容を、頭の中でしっかりと理解してつかみ取ること。", g: "中学" },
+            { q: "変遷", a: "へんせん", short_a: "へんせん", exp: "時代の流れとともに、物事の様子や仕組みが移り変わっていくこと。", g: "中学" },
+            { q: "模倣", a: "もほう", short_a: "もほう", exp: "すでに他人が作り上げたアイデアや製品などを、そっくりそのまま真似ること。", g: "中学" },
+            { q: "頻繁", a: "ひんぱん", short_a: "ひんぱん", exp: "同じ出来事や活動が、短い間隔で何度も繰り返して起こる様子。", g: "中学" },
+            { q: "抽象", a: "ちゅうしょう", short_a: "ちゅうしょう", exp: "具体的なものから共通の性質を取り出し、頭の中の広いアイデアとしてまとめること。", g: "中学" },
+            { q: "擁護", a: "ようご", short_a: "ようご", exp: "非難されている人の立場に立ち、その人をかばって全力で守り助けること。", g: "中学" },
+            { q: "洞察", a: "どうさつ", short_a: "どうさつ", exp: "表面的な現象を見るだけでなく、隠された本質や相手の本心を深く見抜くこと。", g: "中学" },
+            { q: "変革", a: "へんかく", short_a: "へんかく", exp: "これまでの古いやり方や制度を根本からガラリと変え、新しく作り直すこと。", g: "中学" },
+            { q: "誇張", a: "こちょう", short_a: "こちょう", exp: "物事を実際よりも大げさに表現して、他人に強く印象づけようとすること。", g: "中学" },
+            { q: "克服", a: "こくふく", short_a: "こくふく", exp: "自分の苦手な分野、あるいは困難を努力によって乗り越えること。", g: "中学" },
+            { q: "構築", a: "こうちく", short_a: "こうちく", exp: "家などを建てるように、システムや理論などを一から設計して作り上げること。", g: "中学" },
+            { q: "余暇", a: "よか", short_a: "よか", exp: "仕事や勉強などの義務がなく、自分の趣味や休息のために自由に使える時間。", g: "中学" },
+            { q: "譲渡", a: "じょうと", short_a: "じょうと", exp: "自分が持っている権利や財産、モノを、他の人に譲り渡すこと。", g: "中学" },
+            { q: "意図", a: "いと", short_a: "いと", exp: "何かを行う前に、心の中で目指している目的や、こうしようと企んでいる考えのこと。", g: "中学" },
+            { q: "偏見", a: "へんけん", short_a: "へんけん", exp: "十分な根拠がないまま、一部の情報だけで思い込み、偏った悪い見方をしてしまうこと。", g: "中学" },
+            { q: "啓発", a: "けいはつ", short_a: "けいはつ", exp: "人々に新しい気づきや知識を与え、より高いレベルへ意識を導き開くこと。", g: "中学" },
+            { q: "開拓", a: "かいたく", short_a: "かいたく", exp: "未開の荒野を切りひらいて畑にしたり、新しい道や分野を自分の力で広げること。", g: "中学" },
+            { q: "威嚇", a: "いかく", short_a: "いかく", exp: "自分の強さや力を見せつけて、相手を怖がらせ、おどすこと。", g: "中学" },
+            { q: "迅速", a: "じんそく", short_a: "じんそく", exp: "物事の対応や動きが、非常にスピーディーで素早い様子。", g: "中学" },
+            { q: "模索", a: "もさく", short_a: "もさく", exp: "手がかりがない中で、あれこれと試しながら良い方法を探し求めること。", g: "中学" },
+            { q: "隠居", a: "いんきょ", short_a: "いんきょ", exp: "仕事や社会的な地位を退き、あとはのんびりと静かに暮らすこと。", g: "中学" },
+            { q: "克明", a: "こくめい", short_a: "こくめい", exp: "細かい部分まで、手を抜かずに非常に細かく丁寧に記録したり表現したりする様子。", g: "中学" },
+            { q: "崩壊", a: "ほうかい", short_a: "ほうかい", exp: "建物や組織、制度などのバランスが崩れて、一気に崩れ壊れてしまうこと。", g: "中学" },
+            { q: "驚異", a: "きょうい", short_a: "きょうい", exp: "普通では考えられないような不思議なことや、人々に強い感動や驚きを与えるもの。", g: "中学" },
+            { q: "軽蔑", a: "けいべつ", short_a: "けいべつ", exp: "相手の価値を低く見て、ばかにしたような態度で見下すこと。", g: "中学" },
+            { q: "架空", a: "かくう", short_a: "かくう", exp: "現実には存在せず、物語や想像の中で作り上げられた偽物の世界や存在。", g: "中学" }
+        ]
+    };
+
+    const charSprites = {
+        normal: "🤖",
+        happy: "🤖✨",
+        sad: "🤖💦",
+        clear: "🤖👑"
+    };
+
+    const charSpeech = {
+        start: "ピピッ！システム起動完了。ボクはタイピンくん！「漢字でGO!」いっしょにがんばろう！",
+        correct: ["ピピピッ！大正解！すばらしい処理速度だ！", "システム正常！その調子でどんどんいこう！", "さすが！パーフェクトタイピングだ！"],
+        wrong: ["エラー検知！次こそリベンジだ！", "どんまい！解説データを確認してみよう！", "落ち着いて入力してみてね！"],
+        timeUp: ["タイムアウト！解説をメモリに記録してね！", "危険！スピードアップだ！💦"],
+        clear: "完全クリアおめでとう！君のタイピングデータは最高クラスだよ！",
+        over: "ゲームオーバー！次はもっとスコアをアップデートできるよ！"
+    };
+
+    let quizList = [];
+    let currentIdx = 0;
+    let lives = 5;
+    let score = 0;
+    let timeLeft = 15;
+    let timerInterval = null;
+    const maxTime = 15;
+
+    let expTimeLeft = 5;
+    let expInterval = null;
+
+    let audioCtx = null;
+    let bgmInterval = null;
+    let bgmTick = 0;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function playTone(freq, type, duration, volume = 0.1, delay = 0) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + delay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+    }
+
+    function playCorrectSE() {
+        playTone(523.25, 'sine', 0.1, 0.1, 0); 
+        playTone(659.25, 'sine', 0.1, 0.1, 0.08); 
+        playTone(783.99, 'sine', 0.15, 0.1, 0.16); 
+    }
+
+    function playWrongSE() {
+        playTone(180, 'sawtooth', 0.25, 0.15);
+    }
+
+    function startBGM() {
+        stopBGM();
+        const melody = [523, 587, 659, 784, 880, 784, 659, 587];
+        bgmTick = 0;
+        bgmInterval = setInterval(() => {
+            const freq = melody[bgmTick % melody.length];
+            playTone(freq, 'square', 0.08, 0.02);
+            bgmTick++;
+        }, 200);
+    }
+
+    function stopBGM() {
+        if (bgmInterval) {
+            clearInterval(bgmInterval);
+            bgmInterval = null;
+        }
+    }
+
+    const startScreen = document.getElementById("start-screen");
+    const explanationScreen = document.getElementById("explanation-screen");
+    const resultScreen = document.getElementById("result-screen");
+    const resultTitle = document.getElementById("result-title");
+    const resultScore = document.getElementById("result-score");
+    const qNumText = document.getElementById("question-num");
+    const heartBox = document.getElementById("heart-box");
+    const kanjiDisplay = document.getElementById("kanji-display");
+    const gradeInfo = document.getElementById("grade-info");
+    const timerBar = document.getElementById("timer-bar");
+    const inputBox = document.getElementById("input-box");
+    
+    const expStatus = document.getElementById("exp-status");
+    const expWord = document.getElementById("exp-word");
+    const expReading = document.getElementById("exp-reading");
+    const expText = document.getElementById("exp-text");
+    const countBar = document.getElementById("count-bar");
+    const countText = document.getElementById("count-text");
+    const skipBtn = document.getElementById("skip-btn");
+
+    const charSprite = document.getElementById("char-sprite");
+    const charBubble = document.getElementById("char-bubble");
+
+    function updateChar(pose, speech) {
+        charSprite.textContent = charSprites[pose];
+        charBubble.textContent = speech;
+    }
+
+    function getRandomSpeech(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function startGame(difficulty) {
+        initAudio();
+        startBGM();
+
+        let rawPool = [];
+        if (difficulty === 'easy') {
+            rawPool = [...kanjiDatabase.easy];
+        } else if (difficulty === 'normal') {
+            rawPool = [...kanjiDatabase.normal];
+        } else if (difficulty === 'hard') {
+            rawPool = [...kanjiDatabase.hard];
+        } else {
+            rawPool = [...kanjiDatabase.easy, ...kanjiDatabase.normal, ...kanjiDatabase.hard];
+        }
+
+        quizList = rawPool.sort(() => Math.random() - 0.5).slice(0, 40);
+
+        currentIdx = 0;
+        lives = 5;
+        score = 0;
+
+        updateHearts();
+        updateChar("normal", charSpeech.start);
+
+        startScreen.classList.add("hidden");
+        explanationScreen.classList.add("hidden");
+        resultScreen.classList.add("hidden");
+        inputBox.disabled = false;
+        inputBox.focus();
+
+        showQuestion();
+    }
+
+    function updateHearts() {
+        heartBox.textContent = "❤️".repeat(lives) + "🖤".repeat(5 - lives);
+    }
+
+    function showQuestion() {
+        if (currentIdx >= quizList.length || lives <= 0) {
+            endGame();
+            return;
+        }
+
+        qNumText.textContent = currentIdx + 1;
+        inputBox.value = "";
+        
+        const currentData = quizList[currentIdx];
+        kanjiDisplay.textContent = currentData.q;
+        gradeInfo.textContent = currentData.g;
+
+        kanjiDisplay.style.transform = "scale(1)";
+        timeLeft = maxTime;
+        updateTimerBar();
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                clearInterval(timerInterval);
+                onTimeOut();
+            }
+            updateTimerBar();
+
+            const scale = 1 + ((maxTime - timeLeft) / maxTime) * 3.5;
+            kanjiDisplay.style.transform = `scale(${scale})`;
+        }, 100);
+    }
+
+    function updateTimerBar() {
+        const percentage = (timeLeft / maxTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+    }
+
+    inputBox.addEventListener("input", (e) => {
+        const currentData = quizList[currentIdx];
+        const userInput = e.target.value.trim();
+
+        if (userInput === currentData.a || userInput === currentData.short_a) {
+            clearInterval(timerInterval);
+            playCorrectSE();
+            score++;
+            
+            updateChar("happy", getRandomSpeech(charSpeech.correct));
+
+            inputBox.style.borderColor = "#22c55e";
+            setTimeout(() => {
+                inputBox.style.borderColor = "#93c5fd";
+                showExplanation(currentData, true);
+            }, 150);
+        }
+    });
+
+    function showExplanation(wordData, isCorrect) {
+        inputBox.disabled = true;
+
+        if (isCorrect) {
+            expStatus.textContent = "🌟 せいかい！ 🌟";
+            expStatus.style.color = "#22c55e";
+        } else {
+            expStatus.textContent = "💥 ざんねん！時間切れ 💥";
+            expStatus.style.color = "#ef4444";
+        }
+
+        expWord.textContent = wordData.q;
+        expReading.textContent = `よみがな: ${wordData.a} ${wordData.short_a !== wordData.a ? '(「' + wordData.short_a + '」もOK!)' : ''}`;
+        expText.textContent = wordData.exp;
+
+        explanationScreen.classList.remove("hidden");
+
+        expTimeLeft = 5;
+        updateExpBar();
+
+        clearInterval(expInterval);
+        expInterval = setInterval(() => {
+            expTimeLeft -= 0.1;
+            if (expTimeLeft <= 0) {
+                expTimeLeft = 0;
+                clearInterval(expInterval);
+                closeExplanation();
+            }
+            updateExpBar();
+        }, 100);
+    }
+
+    function updateExpBar() {
+        const percentage = (expTimeLeft / 5) * 100;
+        countBar.style.width = `${percentage}%`;
+        countText.textContent = `次の問題まであと ${Math.ceil(expTimeLeft)} 秒`;
+    }
+
+    function closeExplanation() {
+        clearInterval(expInterval);
+        explanationScreen.classList.add("hidden");
+        inputBox.disabled = false;
+        inputBox.focus();
+        updateChar("normal", "次の漢字をロード中...ピピッ、急いで入力してね！");
+        currentIdx++;
+        showQuestion();
+    }
+
+    skipBtn.addEventListener("click", closeExplanation);
+
+    function onTimeOut() {
+        playWrongSE();
+        lives--;
+        updateHearts();
+        
+        updateChar("sad", getRandomSpeech(charSpeech.timeUp));
+        inputBox.style.borderColor = "#ef4444";
+
+        setTimeout(() => {
+            inputBox.style.borderColor = "#93c5fd";
+            showExplanation(quizList[currentIdx], false);
+        }, 300);
+    }
+
+    function endGame() {
+        clearInterval(timerInterval);
+        clearInterval(expInterval);
+        stopBGM();
+        inputBox.disabled = true;
+
+        const charResultEmoji = document.getElementById("char-result-emoji");
+
+        if (lives > 0) {
+            resultTitle.textContent = "🎉 完全制覇！ 🎉";
+            resultTitle.style.color = "#22c55e";
+            charResultEmoji.textContent = "🤖👑";
+            updateChar("clear", charSpeech.clear);
+            playTone(523, 'sine', 0.15, 0.1, 0);
+            playTone(659, 'sine', 0.15, 0.1, 0.1);
+            playTone(784, 'sine', 0.15, 0.1, 0.2);
+            playTone(1046, 'sine', 0.4, 0.1, 0.3);
+        } else {
+            resultTitle.textContent = "💥 GAME OVER 💥";
+            resultTitle.style.color = "#ef4444";
+            charResultEmoji.textContent = "🤖💔";
+            updateChar("sad", charSpeech.over);
+            playTone(150, 'sawtooth', 0.6, 0.2);
+        }
+
+        resultScore.textContent = `正解数: ${score} / ${quizList.length} 問`;
+        resultScreen.classList.remove("hidden");
+    }
+
+    document.getElementById("retry-btn").addEventListener("click", () => {
+        resultScreen.classList.add("hidden");
+        startScreen.classList.remove("hidden");
+    });
+</script>
+</body>
+</html>
